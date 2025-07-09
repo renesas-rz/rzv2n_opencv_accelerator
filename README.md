@@ -39,8 +39,10 @@ If DRP is [enabled](#51-oca_activate) and the parameters of OpenCV meet the [con
 The output OpenCVA using DRP is almost identical to output OpenCV using CPU, but not exactly the same. Much of this difference is due to the accuracy of in the DRP's arithmetic unit, and some is due to differences in algorithms.
 
 <br><span style="color: red; ">
-**DRP is also used for video decoding function, however since DRP is a common HW resource, OpenCVA and video decoding function cannot be used at the same time. For the same reason, OpenCVA must be used in single process and single thread. In case of conflicting use of DRP, it causes an exception errors or performance degradation.    
-For details, please see [Chapter 5.2](#52-oca_conflictnotification) and [Chapter 6](#6-drp-conflict).**
+**OpenCVA must be used in single process and single thread.  
+For details, please see [Chapter 5.2](#52-oca_conflictnotification).  
+DRP is also used for video decoding function of Video Codec Library and DRP-AI TVM, however since DRP is a common HW resource, OpenCVA, video decoding function and DRP-AI TVM cannot be used at the same time.  
+For details, please see [Chapter 6](#6-drp-conflict).**
 </span><br>
 
 ## 1.3. Restrictions
@@ -518,7 +520,7 @@ This chapter describes API functions to control OpenCVA.
 ## 5.1. OCA_Activate
 
 ### [Summary]  
-Disable or enable DRP used for OpenCV process.
+Disable or enable DRP used for OpenCV.
 
 ### [Function name]	
 OCA_Activate
@@ -572,7 +574,7 @@ OCA_Activate( &OCA_list[0] );
 ## 5.2 OCA_ConflictNotification
 
 ### [Summary]
-Sets the behavior when DRP conflicts occur (exception error occurs or not).
+Sets the behavior when OpenCVA is executed simultaneously in multi-process or multi-thread (exception error occurs or not).
 
 ### [Function name]
 OCA_ConflictNotification
@@ -581,13 +583,11 @@ OCA_ConflictNotification
 void OCA_ConflictNotification (int oca_conflict );
 
 ### [Arguments]
-oca_conflict	0: When DRP conflicts, exception error occurs.  
-Not 0: When DRP conflicts, exception error does not occur, and the OpenCV function is executed by CPU.
+oca_conflict	0: When OpenCVA is executed simultaneously in multi-process or multi-thread, exception error occurs.  
+Not 0: When OpenCVA is executed simultaneously in multi-process or multi-thread, exception error does not occur, and the second and subsequent OpenCV functions are executed by CPU.
 
 ### [Feature]
-Sets the behavior when DRP conflicts occur (exception error occurs or not). By default, it causes an exception error do to DRP conflict.  
-e.g., execute OpenCV using DRP while the video decoding process is using the DRP.  
-The error code for exception errors is -501.
+OpenCVA must be used in single process and single thread. Sets the behavior when OpenCVA is executed simultaneously in multi-process or multi-thread by this function. By default, it causes an exception error. The error code for exception errors is -501.  
 
 ### [Sample]
 The following is a sample to handle exception error.  
@@ -604,18 +604,9 @@ cv::GaussianBlur(src, dst, {7,7},0,0);
 This chapter describes DRP conflict.
 
 ## 6.1. About DRP conflict
-OpenCVA use “Dynamically Reconfigurable Processor” (=DRP). And the video decoding functions use the same DRP. There is only one DRP used by these functions on a device. And the function occupies the DRP while it is executing.  
-If the OpenCV use the DRP but is unable to do so because the DRP is already being used by another function, this is called “DRP conflict.”  
-  
-OpenCVA cause DRP conflicts in the following 2cases:  
-case1. Case of start OpenCV using DRP, while the video decoding function uses DRP in parallel.  
-case2. Case of start OpenCV using DRP, while other OpenCV is using DRP in another process (or thread).  
-  
-If neither of the 2cases matches, then the DRP does not conflict. i.e.,  
-1. Video decoding and OpenCV using DRP are executed sequentially.  
-2. OpenCV using DRP is executed by single process/thread.  
+OpenCVA uses “Dynamically Reconfigurable Processor” (=DRP). Video decoding functions of Video Codec Library and DRP-AI TVM also use the same DRP. There is only one DRP on a device and these functions occupy DRP while they are executing. If a function that uses DRP is already executed, another function that uses DRP cannot be executed. This is called “DRP conflict.”  
+
+Using OpenCVA, video decoding function and DRP-AI TVM at the same time will cause DRP conflict. By executing these functions sequentially, the DRP conflict can be avoided.  
   
 ## 6.2. What happened if there was a conflict, and how to handle it
-If the OpenCVA occurred DRP conflict, it raises an exception error or execute OpenCV function by CPU instead of the DRP. (selected by the OCA_ConflictNotification()).  
-If the DRP conflict occur exception error, the user application must be able to handle the exception error, as in [Chapter 5.2](#52-oca_conflictnotification) sample.  
-If the OpenCV function executed by CPU, the user applications do not need to support anything, but performance of the OpenCV should be confirmed.  
+If DRP conflict is caused, an error in OpenCVA, Video Codec Library or DRP-AI TVM will occur. Users should be careful not to use OpenCVA, video decoding function and DRP-AI TVM simultaneously.  
