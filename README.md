@@ -552,7 +552,7 @@ The argument of the API function is the array variable OCA_list[]. See the follo
 | 10 | matchTemplate |
 | 11 | warpAffine |
 | 12 | pyrDown |
-| 13 | perUp |
+| 13 | pyrUp |
 | 14 | warpPerspective |
 | 15 | FAST |
 | Others | (unused) |    
@@ -565,10 +565,16 @@ Values other than 0 and 1 are ignored.
 ### [Sample]
 ```
 unsigned long OCA_list[16];
-for(int i=0; i<16; i++)OCA_list[i]=2;
+
+for (int i = 0; i < 16; i++)
+{
+    OCA_list[i] = 1;
+}
+
 /* Disable DRP(Sobel) */
-OCA_list[8] = 0;	//Disable
-OCA_Activate( &OCA_list[0] );
+OCA_list[8] = 0;
+
+OCA_Activate(&OCA_list[0]);
 ```
 
 ## 5.2 OCA_ConflictNotification
@@ -593,20 +599,26 @@ OpenCVA must be used in single process and single thread. Sets the behavior when
 The following is a sample to handle exception error.  
 ```
 /* Exception error enable */
-OCA_ConflictNotification( 0 );
-try{
-cv::GaussianBlur(src, dst, {7,7},0,0);
-} catch(cv::Exception& e) {
-    if( e == -501 ){/* exception error handling */}
+OCA_ConflictNotification(0);
+try
+{
+    cv::GaussianBlur(src, dst, {7,7}, 0, 0);
+}
+catch (cv::Exception& e)
+{
+    if (e == -501)
+    {
+        /* exception error handling */
+    }
 }
 ```
 # 6. DRP conflict
 This chapter describes DRP conflict.
 
 ## 6.1. About DRP conflict
-OpenCVA uses “Dynamically Reconfigurable Processor” (=DRP). Video decoding functions of Video Codec Library and DRP-AI TVM also use the same DRP. There is only one DRP on a device and these functions occupy DRP while they are executing. If a function that uses DRP is already executed, another function that uses DRP cannot be executed. This is called “DRP conflict.”  
+OpenCVA uses “Dynamically Reconfigurable Processor” (=DRP). Video decoding functions of Video Codec Library and DRP-AI TVM also use the same DRP. There is only one DRP on a device and these functions occupy DRP while they are executing. If a function that uses DRP is already executed, another function that uses DRP cannot be executed. This is called “DRP conflict”.  
 
-Using OpenCVA, video decoding function and DRP-AI TVM at the same time will cause DRP conflict. By executing these functions sequentially, the DRP conflict can be avoided.  
+Using OpenCVA, video decoding function and DRP-AI TVM at the same time will cause DRP conflict.  
   
 ## 6.2. What happened if there was a conflict, and how to handle it
-If DRP conflict is caused, an error in OpenCVA, Video Codec Library or DRP-AI TVM will occur. Users should be careful not to use OpenCVA, video decoding function and DRP-AI TVM simultaneously.  
+If DRP conflict is caused, an error in OpenCVA, Video Codec Library or DRP-AI TVM will occur. By executing these functions sequentially, DRP conflict can be avoided. Users should be careful not to use OpenCVA, video decoding function and DRP-AI TVM simultaneously.  
