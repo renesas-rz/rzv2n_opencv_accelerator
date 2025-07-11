@@ -1,22 +1,22 @@
-From 34ab4e50f11098740760a7c83a32c89a942e495b Mon Sep 17 00:00:00 2001
-From: Your Name <you@example.com>
-Date: Thu, 25 Jul 2024 17:47:24 +0900
-Subject: [PATCH 2/2] enable drp drv
+From 6b0a5f0c03c048dc79b3ba3961b49ff1edad1b98 Mon Sep 17 00:00:00 2001
+From: Katsuki Tozawa <katsuki.tozawa.wz@renesas.com>
+Date: Mon, 3 Feb 2025 16:38:05 +0900
+Subject: [PATCH 2/2] enable drp driver
 
 ---
  drivers/Kconfig          |    2 +
  drivers/Makefile         |    1 +
- drivers/drp/Kconfig      |   14 +
- drivers/drp/Makefile     |    8 +
- drivers/drp/drp-core.c   | 1660 +++++++++++++++++++++++++
+ drivers/drp/Kconfig      |   29 +
+ drivers/drp/Makefile     |   13 +
+ drivers/drp/drp-core.c   | 1660 ++++++++++++++++++++++++
  drivers/drp/drp-core.h   |  120 ++
- drivers/drp/drp-if.c     | 2530 ++++++++++++++++++++++++++++++++++++++
+ drivers/drp/drp-if.c     | 2594 ++++++++++++++++++++++++++++++++++++++
  drivers/drp/drp-reg.h    | 1071 ++++++++++++++++
- drivers/drp/lock_drp.c   |  583 +++++++++
- drivers/drp/lock_drp.h   |   65 +
+ drivers/drp/lock_drp.c   |  632 ++++++++++
+ drivers/drp/lock_drp.h   |   67 +
  include/linux/drp.h      |   22 +
  include/uapi/linux/drp.h |   95 ++
- 12 files changed, 6171 insertions(+)
+ 12 files changed, 6306 insertions(+)
  create mode 100644 drivers/drp/Kconfig
  create mode 100644 drivers/drp/Makefile
  create mode 100644 drivers/drp/drp-core.c
@@ -29,10 +29,10 @@ Subject: [PATCH 2/2] enable drp drv
  create mode 100644 include/uapi/linux/drp.h
 
 diff --git a/drivers/Kconfig b/drivers/Kconfig
-index 4ac778b95baf..126fa2689608 100644
+index 04a20db857ba..0ed46ef1228b 100644
 --- a/drivers/Kconfig
 +++ b/drivers/Kconfig
-@@ -88,6 +88,8 @@ source "drivers/thermal/Kconfig"
+@@ -89,6 +89,8 @@ source "drivers/thermal/Kconfig"
  
  source "drivers/watchdog/Kconfig"
  
@@ -42,7 +42,7 @@ index 4ac778b95baf..126fa2689608 100644
  
  source "drivers/bcma/Kconfig"
 diff --git a/drivers/Makefile b/drivers/Makefile
-index 354b8fd483bc..a4c72fe19243 100644
+index 9fc91d2bbe4c..a6c27ae23cbd 100644
 --- a/drivers/Makefile
 +++ b/drivers/Makefile
 @@ -119,6 +119,7 @@ obj-y				+= power/
@@ -55,10 +55,10 @@ index 354b8fd483bc..a4c72fe19243 100644
  obj-$(CONFIG_ACCESSIBILITY)	+= accessibility/
 diff --git a/drivers/drp/Kconfig b/drivers/drp/Kconfig
 new file mode 100644
-index 000000000000..b253dc9366c1
+index 000000000000..2fc4b39a8b67
 --- /dev/null
 +++ b/drivers/drp/Kconfig
-@@ -0,0 +1,14 @@
+@@ -0,0 +1,29 @@
 +#
 +# DRP subsystem configuration
 +#
@@ -66,27 +66,47 @@ index 000000000000..b253dc9366c1
 +menu "DRP/DRP support"
 +
 +config DRP
-+	bool "DRP support"
-+	default y
-+	help
-+	  DRP is a peripheral hardware that accelerates image processing.
-+	  If you want DRP support, you should say Y here.
++    bool "DRP support"
++    default y
++    help
++      DRP is a peripheral hardware that accelerates image processing.
++      If you want DRP support, you should say Y here.
++
++config DRP_SUPPORT_MULTI_OS
++    bool "Support Multiple OS System"
++    depends on !ARCH_R9A09G056
++    default n
++    help
++        If you want to use multiple OS system (assumed with RTOS), you should say Y here.
++
++config DRP_INIT_SHARED_MEMORY
++    bool "Initialize Shared Memory"
++    depends on !ARCH_R9A09G056
++    default n
++    help
++        If you want to initialize shard memory, you should say Y here.
++        When "Support Multiple OS System" is 'Y', this option is enable.  
 +
 +endmenu
 diff --git a/drivers/drp/Makefile b/drivers/drp/Makefile
 new file mode 100644
-index 000000000000..08cef534c1dd
+index 000000000000..c8570d4faef2
 --- /dev/null
 +++ b/drivers/drp/Makefile
-@@ -0,0 +1,8 @@
+@@ -0,0 +1,13 @@
 +# SPDX-License-Identifier: GPL-2.0
 +#
-+# Makefile for DRP/DRP.
++# Makefile for DRP-AI/DRP.
 +#
++ccflags-y := -Werror
 +
++ifdef CONFIG_ARCH_R9A09G056
++CFLAGS_lock_drp.o += -Wall -mno-outline-atomics
++LDFLAGS_lock_drp.o += -lgcc
 +obj-$(CONFIG_DRP)	+= drp-core.o drp-if.o lock_drp.o
-+
-+
++else
++obj-$(CONFIG_DRP)	+= drp-core.o drp-if.o
++endif
 diff --git a/drivers/drp/drp-core.c b/drivers/drp/drp-core.c
 new file mode 100644
 index 000000000000..5f51730a9aab
@@ -1881,10 +1901,10 @@ index 000000000000..37f7be375a9f
 +#endif /* DRP__H */
 diff --git a/drivers/drp/drp-if.c b/drivers/drp/drp-if.c
 new file mode 100644
-index 000000000000..47e969ebb7f0
+index 000000000000..280d7071e7c2
 --- /dev/null
 +++ b/drivers/drp/drp-if.c
-@@ -0,0 +1,2530 @@
+@@ -0,0 +1,2594 @@
 +/*
 + * Driver for the Renesas RZ/V2H, RZ/V2N DRP unit
 + *
@@ -1933,6 +1953,7 @@ index 000000000000..47e969ebb7f0
 +#include <linux/delay.h>
 +#include <linux/clk.h>
 +#include <linux/reset.h>
++#include <linux/version.h>
 +#include <linux/drp.h>    /* Header file for DRP-AI Driver */
 +#include "drp-core.h"     /* Header file for DRP-AI Core */
 +#include "lock_drp.h"     /* multi OS exclusion control */
@@ -1963,7 +1984,7 @@ index 000000000000..47e969ebb7f0
 +#define SYS_MASK_DRP                (0x00000300)
 +#define SYS_SHIFT                   (24)
 +
-+#define DRP_DRIVER_VERSION        "1.10 rel.1"
++#define DRP_DRIVER_VERSION        "1.20 rel.3"
 +#define DRP_DEV_NUM                (1)
 +#define DRP_DRIVER_NAME            "drp"     /* Device name */
 +#define DRP_64BYTE_ALIGN           (0x3F)      /* Check 64-byte alignment */
@@ -2027,6 +2048,9 @@ index 000000000000..47e969ebb7f0
 +static int drp_probe(struct platform_device *pdev);
 +static int drp_remove(struct platform_device *pdev);
 +static int drp_open(struct inode *inode, struct file *file);
++#ifdef ENABLE_DRP_SUPPORT_SHARED_MEMORY
++static void drp_shutdown(struct platform_device *pdev);
++#endif
 +static int drp_close(struct inode *inode, struct file *file);
 +static int drp_flush(struct file *file, fl_owner_t id);
 +static ssize_t  drp_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos);
@@ -2177,6 +2201,9 @@ index 000000000000..47e969ebb7f0
 +    },
 +    .probe      = drp_probe,
 +    .remove     = drp_remove,
++#ifdef ENABLE_DRP_SUPPORT_SHARED_MEMORY
++    .shutdown   = drp_shutdown,
++#endif
 +};
 +
 +static struct drp_priv *drp_priv;
@@ -2234,6 +2261,42 @@ index 000000000000..47e969ebb7f0
 +
 +    return 0;
 +}
++
++#ifdef ENABLE_DRP_SUPPORT_SHARED_MEMORY
++static void drp_shutdown(struct platform_device *pdev)
++{
++    int flag_ret = 0;
++    DRP_DEBUG_PRINT("start.\n");
++
++    drp_shared_exclusion = phys_to_virt(drp_shared_base_addr);
++    flag_ret = R_DRP_IsSharedMemoryInitialized(drp_shared_exclusion);
++    if(-1 == flag_ret)
++    {
++        // If not cleared shared memory, clear the shared memory
++        if(0 != R_DRP_ClearHashArea(drp_shared_exclusion))
++        {
++            dev_err(&pdev->dev, "Failed to clear the shared memory region. Power off the board to reset the memory and then boot the board again.");
++        }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,1)
++        dcache_clean_inval_poc((unsigned long)drp_shared_exclusion, (unsigned long)drp_shared_exclusion + drp_shared_size);
++#else
++        __flush_dcache_area(drp_shared_exclusion, drp_shared_size);
++#endif
++        dev_info(&pdev->dev, "Shared memory region has cleared.");
++    }
++    else
++    {
++        // If cleared shared memory
++        dev_info(&pdev->dev, "Shared memory region has already cleared.");
++    }
++    
++    DRP_DEBUG_PRINT("end.\n");
++    
++    goto end;
++end:
++    return;
++}
++#endif
 +
 +static int drp_open(struct inode *inode, struct file *file)
 +{
@@ -2626,7 +2689,12 @@ index 000000000000..47e969ebb7f0
 +            result = -EFAULT;
 +            goto end;
 +        }
++        // Write the data from the cache back to the main memory.
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,1)
++        dcache_clean_inval_poc((unsigned long)p_drp_cma, (unsigned long)p_drp_cma + drp_data.size);
++#else
 +        __flush_dcache_area(p_drp_cma, drp_data.size);
++#endif
 +        rw_status = DRP_STATUS_IDLE_RW;
 +    }
 +
@@ -3002,7 +3070,7 @@ index 000000000000..47e969ebb7f0
 +    int ret;
 +    struct drp_priv *priv;
 +#ifdef ENABLE_DRP_SUPPORT_SHARED_MEMORY
-+	int flag_ret;
++    int flag_ret;
 +#endif
 +
 +    DRP_DEBUG_PRINT("start.\n");
@@ -3132,6 +3200,7 @@ index 000000000000..47e969ebb7f0
 +    }
 +    else
 +    {
++        R_DRP_ClearFlagManagementArea(drp_shared_exclusion);
 +        R_DRP_InitializeSharedMemory(drp_shared_exclusion);
 +        dev_info(&pdev->dev, "Initilize shared memory region to be used in exclusive control of DRP-AI.");
 +    }
@@ -3399,8 +3468,12 @@ index 000000000000..47e969ebb7f0
 +        result = -EFAULT;
 +        goto end;
 +    }
++    // The cache is disabled for the initial access to read from memory.
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,1)
++    dcache_inval_poc((unsigned long)p_virt_address, (unsigned long)p_virt_address + drp_data.size);
++#else
 +    __inval_dcache_area(p_virt_address, drp_data.size);
-+
++#endif
 +    /* Initialization of read / write processing variables */
 +    rw_status   = DRP_STATUS_ASSIGN;
 +    write_count = 0;
@@ -3530,7 +3603,11 @@ index 000000000000..47e969ebb7f0
 +    /* LV disable */
 +    *(desc_info->vaddr + 51) = 0x0A;
 +
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,1)
++    dcache_clean_inval_poc((unsigned long)desc_info->vaddr, (unsigned long)desc_info->vaddr + DRP_CMA_SIZE);
++#else
 +    __flush_dcache_area(desc_info->vaddr, DRP_CMA_SIZE);
++#endif
 +
 +    /* Set AdrConv Table */
 +    /* drp_adrconv_tbl[Page] : 40-bit physical address associated for Page */
@@ -3577,7 +3654,11 @@ index 000000000000..47e969ebb7f0
 +            drp_adrconv_tbl[adrconv_cnt++] = (io_adr_start & ADR_CONV_MASK) + j * VAL_16M;
 +        }
 +    }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,1)
++    dcache_clean_inval_poc((unsigned long)param_addr, (unsigned long)param_addr + proc[1].size);
++#else
 +    __flush_dcache_area(param_addr, proc[1].size);
++#endif
 +#ifdef ENABLE_DRP_SUPPORT_SHARED_MEMORY
 +        /* DRPFLAG_DRP_LOCK is set */
 +        flag_drp_shared_used = R_DRP_LockDrpaiContStatus(drp_shared_exclusion,
@@ -4137,8 +4218,11 @@ index 000000000000..47e969ebb7f0
 +    {
 +        memcpy(desc_info->vaddr + (DRP_SGL_DRP_DESC_SIZE * i), &drp_single_desc_bin[0], sizeof(drp_single_desc_bin));
 +    }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,1)
++    dcache_clean_inval_poc((unsigned long)desc_info->vaddr, (unsigned long)desc_info->vaddr + DRP_CMA_SIZE);
++#else
 +    __flush_dcache_area(desc_info->vaddr, DRP_CMA_SIZE);
-+
++#endif
 +    desc_info->drp_desc_adr_40bit = desc_info->seq.address;
 +    desc_info->drp_iodata_num = desc_info->seq.iodata_num;
 +    if (desc_info->drp_iodata_num>MAX_IODATA_NUM)
@@ -5494,10 +5578,10 @@ index 000000000000..0fff58bffdcf
 +#endif /* DRP_REG__H */
 diff --git a/drivers/drp/lock_drp.c b/drivers/drp/lock_drp.c
 new file mode 100644
-index 000000000000..256ec18c7b7b
+index 000000000000..043bf12e1f6f
 --- /dev/null
 +++ b/drivers/drp/lock_drp.c
-@@ -0,0 +1,583 @@
+@@ -0,0 +1,632 @@
 +/*
 + * Driver for the Renesas RZ/V2H, RZ/V2N DRP-AI unit
 + *
@@ -5513,7 +5597,7 @@ index 000000000000..256ec18c7b7b
 + * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 + * GNU General Public License for more details.
 + */
-+#include <stddef.h>
++#include <linux/stddef.h>
 +#include <linux/device.h>
 +#include <linux/delay.h>
 +#include "lock_drp.h"
@@ -6006,7 +6090,7 @@ index 000000000000..256ec18c7b7b
 + * @retval 0 Successfully initialize a shared memory. Shared memory has not yet been initialized,
 + *           but the HASH values were successfully written.
 + * @retval -2 Invalid argument is set.
-+ * @note Write 0 to FLAG_MANAGE_MEMORY area. Write HASH to HASH_TOP_STORE_MEMORY and HASH_BOTTOM_STORE_MEMORY.
++ * @note Write HASH to HASH_TOP_STORE_MEMORY and HASH_BOTTOM_STORE_MEMORY.
 +*/
 +int R_DRP_InitializeSharedMemory(unsigned long long *addr)
 +{
@@ -6024,7 +6108,56 @@ index 000000000000..256ec18c7b7b
 +    *(addr+HASH_TOP_STORE_MEMORY) = (*(addr+HASH_TOP_STORE_MEMORY) | INIT_HASH_TOP_VAL);
 +    *(addr+HASH_BOTTOM_STORE_MEMORY) = (*(addr+HASH_BOTTOM_STORE_MEMORY) | INIT_HASH_BOTTOM_VAL);
 +
-+    *(addr+FLAG_MANAGE_MEMORY) = 0;
++    goto end;
++end:
++    return result;
++}
++
++/** Clear the flag management area in a shared memory.
++ * @param addr Base address for a shared memory.
++ * @return Whether this function succeeded or not
++ * @retval 0 Successfully clear a shared memory. Write 0 to shared memory.
++ * @retval -2 Invalid argument is set.
++ * @note Write 0 to FLAG_MANAGE_MEMORY area.
++*/
++int R_DRP_ClearFlagManagementArea(unsigned long long *addr)
++{
++    int result = 0;
++
++    /* Check Arguments. */
++    if (NULL == addr) 
++    {
++        result = -2;
++        goto end;
++    }
++
++    *(addr+FLAG_MANAGE_MEMORY) = 0uLL;
++
++    goto end;
++end:
++    return result;
++}
++
++/** Clear the hash area in a shared memory.
++ * @param addr Base address for a shared memory.
++ * @return Whether this function succeeded or not
++ * @retval 0 Successfully clear a shared memory. Write 0 to shared memory.
++ * @retval -2 Invalid argument is set.
++ * @note Write 0 to FLAG_MANAGE_MEMORY area. Write 0 to HASH_TOP_STORE_MEMORY and HASH_BOTTOM_STORE_MEMORY.
++*/
++int R_DRP_ClearHashArea(unsigned long long *addr)
++{
++    int result = 0;
++
++    /* Check Arguments. */
++    if (NULL == addr) 
++    {
++        result = -2;
++        goto end;
++    }
++
++    *(addr+HASH_TOP_STORE_MEMORY) = 0uLL;
++    *(addr+HASH_BOTTOM_STORE_MEMORY) = 0uLL;
 +
 +    goto end;
 +end:
@@ -6083,10 +6216,10 @@ index 000000000000..256ec18c7b7b
 +}
 diff --git a/drivers/drp/lock_drp.h b/drivers/drp/lock_drp.h
 new file mode 100644
-index 000000000000..5b389b8c5558
+index 000000000000..11a55e79f7d6
 --- /dev/null
 +++ b/drivers/drp/lock_drp.h
-@@ -0,0 +1,65 @@
+@@ -0,0 +1,67 @@
 +/*
 + * Driver for the Renesas RZ/V2H, RZ/V2N DRP-AI unit
 + *
@@ -6141,6 +6274,8 @@ index 000000000000..5b389b8c5558
 +int R_DRP_IsDrpaiHwStatusActive(unsigned long long *addr);
 +int R_DRP_InitializeSharedMemory(unsigned long long *addr);
 +int R_DRP_IsSharedMemoryInitialized(unsigned long long *addr);
++int R_DRP_ClearFlagManagementArea(unsigned long long *addr);
++int R_DRP_ClearHashArea(unsigned long long *addr);
 +struct reset_control * R_DRP_GetResetContPointerFromSharedMemory(unsigned long long *addr);
 +int R_DRP_SetResetContPointerToSharedMemory(unsigned long long *addr, struct reset_control * rstc);
 +
@@ -6282,5 +6417,5 @@ index 000000000000..3c8e8d33e985
 +
 +#endif /* _UAPI__DRP_H */
 -- 
-2.25.1
+2.34.1
 

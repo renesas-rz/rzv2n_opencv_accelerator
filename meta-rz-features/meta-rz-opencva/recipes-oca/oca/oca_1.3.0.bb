@@ -19,6 +19,6 @@ do_install() {
     install -m 0755 ${WORKDIR}/OpenCV_Bin.bin ${D}/${INSTALL_DIRECTORY}/
 }
 
-FILES_${PN} = " \
+FILES:${PN} = " \
     ${INSTALL_DIRECTORY}/* \
 "

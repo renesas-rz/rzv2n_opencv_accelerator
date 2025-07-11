@@ -52,8 +52,8 @@ None.
 
 ## 2.1. OpenCV Version  
 OpenCVA is based on as follows version of OpenCV.  
-**OpenCV 4.1.0-r0**  
-For datails, please see [OpenCV Document](https://docs.opencv.org/4.1.0/index.html)  
+**OpenCV 4.9.0-r0**  
+For datails, please see [OpenCV Document](https://docs.opencv.org/4.9.0/index.html)  
 
 ## 2.2. How to use
 You can use OpenCVA same as OpenCV as usual and you do not need to consider of OpenCVA architecture. OpenCVA is automatically executed by DRP as follows if it matches the conditions under which DRP can be used. For the DRP using conditions, see [Chapter 4](#4-opencva-api-specification-and-condition-for-using-drp).  
@@ -84,6 +84,7 @@ The following table lists the OpenCV functions that can be executed using DRP in
 | [4.14. pyrDown](#414-pyrdown) | Downsampling step of the Gaussian pyramid construction. |
 | [4.15. pyrUp](#415-pyrup) | Upsampling step of the Gaussian pyramid construction. |
 | [4.16. FAST](#416-fast) | Detects corners using the FAST algorithm. |
+| [4.17. remap](#417-remap) | Applies a generic geometrical transformation to an image. |
 
 # 4. OpenCVA API specification and condition for using DRP
 This chapter describes the OpenCV API that can be executed by DRP, and their conditions for using DRP.
@@ -101,7 +102,7 @@ void cv::resize (InputArray src, OutputArray dst, Size dsize, double fx = 0, dou
 | dsize	| required | Desired size for the destination image |
 | fx(=0) | optional | Horizontal axis scale |
 | fy(=0) | optional | Vertical axis scale |
-| interpolation<br>(=INTER_LINEAR) | optional | One of the interpolation algorithm methods<br>(see InterpolationFlags in [OpenCV document](https://docs.opencv.org/4.1.0/index.html))|
+| interpolation<br>(=INTER_LINEAR) | optional | One of the interpolation algorithm methods<br>(see InterpolationFlags in [OpenCV document](https://docs.opencv.org/4.9.0/index.html))|
 
 ### 4.1.2. Conditions for using DRP
 If the following conditions apply, OpenCVA execute resizing process using DRP.
@@ -124,7 +125,7 @@ void cv::cvtColor (InputArray src, OutputArray dst, int code, int dstCn = 0 )
 | --------- | ----------------- | ----------- |
 | src | required | Source image |
 | dst | required | Destination image |
-| code | required | Color space conversion code (see ColorConversionCode in [OpenCV document](https://docs.opencv.org/4.1.0/index.html))|
+| code | required | Color space conversion code (see ColorConversionCode in [OpenCV document](https://docs.opencv.org/4.9.0/index.html))|
 | dstCn (=0) | optional | Number of channels in the destination image.  If the default parameter (=0) specified, the number of the channels is derived automatically from src and code |
 
 ### 4.2.2. Conditions for using DRP
@@ -177,7 +178,7 @@ void GaussianBlur (InputArray src, OutputArray dst, Size ksize, double sigmaX, d
 | ksize | required | Gaussian kernel size |
 | sigmaX | required | Gaussian kernel standard deviation in X direction |
 | sigmaY (=0) | optional | Gaussian kernel standard deviation in Y direction |
-| borderType<br>(=BORDER_DEFAULT) | optional | Pixel extrapolation method (see BorderTypes in [OpenCV document](https://docs.opencv.org/4.1.0/index.html)) |
+| borderType<br>(=BORDER_DEFAULT) | optional | Pixel extrapolation method (see BorderTypes in [OpenCV document](https://docs.opencv.org/4.9.0/index.html)) |
 
 ### 4.4.2. Conditions for using DRP
 If the following conditions and apply, OpenCVA execute GaussianBlur process using DRP.
@@ -206,7 +207,7 @@ void cv::dilate (InputArray src, OutputArray dst, InputArray kernel, Point ancho
 | anchor<br>(=Point (-1, -1) ) | optional | Position of the anchor within the element.<br>Default value (-1, -1) means that the anchor is at the element center. |
 | iterations (=1) | optional | Number of times dilation |
 | borderType<br>(=BORDER_CONSTANT) | optional | Pixel extrapolation method |
-| borderValue<br>(=morphologyDefaultBorderValue()) | optional | Border value (see morphologyDefaultBorderValue() in [OpenCV document](https://docs.opencv.org/4.1.0/index.html))|
+| borderValue<br>(=morphologyDefaultBorderValue()) | optional | Border value (see morphologyDefaultBorderValue() in [OpenCV document](https://docs.opencv.org/4.9.0/index.html))|
 
 ### 4.5.2. Conditions for using DRP
 If the following conditions apply, OpenCVA execute dilate process using DRP.
@@ -234,7 +235,7 @@ void cv::erode (InputArray src, OutputArray dst, InputArray kernel, Point anchor
 | anchor<br>(=Point (-1, -1) ) | optional | Position of the anchor within the element.<br>Default value (-1, -1) means that the anchor is at the element center. |
 | iterations (=1) | optional | Number of times dilation |
 | borderType<br>(=BORDER_CONSTANT) | optional | Pixel extrapolation method |
-| borderValue<br>(=morphologyDefaultBorderValue()) | optional | Border value (see morphologyDefaultBorderValue() in [OpenCV document](https://docs.opencv.org/4.1.0/index.html))|
+| borderValue<br>(=morphologyDefaultBorderValue()) | optional | Border value (see morphologyDefaultBorderValue() in [OpenCV document](https://docs.opencv.org/4.9.0/index.html))|
 
 ### 4.6.2. Conditions for using DRP
 If the following conditions apply, OpenCVA execute erode process using DRP.
@@ -259,12 +260,12 @@ void cv::morphologyEX (InputArray src, OutputArray dst, int op, InputArray kerne
 | --------- | ----------------- | ----------- |
 | src | required | Input image |
 | dst | required | Destination image |
-| op | required | Type of a morphological operation (see MorphTypes in [OpenCV document](https://docs.opencv.org/4.1.0/index.html)) |
+| op | required | Type of a morphological operation (see MorphTypes in [OpenCV document](https://docs.opencv.org/4.9.0/index.html)) |
 | kernel | required | Kernel size |
 | anchor<br>(=Point (-1, -1) ) | optional | Position of the anchor within the element.<br>Default value (-1, -1) means that the anchor is at the element center. |
 | iterations (=1) | optional | Number of times dilation |
 | borderType<br>(=BORDER_CONSTANT) | optional | Pixel extrapolation method |
-| borderValue<br>(=morphologyDefaultBorderValue()) | optional | Border value (see morphologyDefaultBorderValue() in [OpenCV document](https://docs.opencv.org/4.1.0/index.html))|
+| borderValue<br>(=morphologyDefaultBorderValue()) | optional | Border value (see morphologyDefaultBorderValue() in [OpenCV document](https://docs.opencv.org/4.9.0/index.html))|
 
 ### 4.7.2. Conditions for using DRP
 If the following conditions apply, OpenCVA execute morphologyEX process using DRP.
@@ -348,8 +349,8 @@ void cv::adaptiveThreshold (InputArray src, OutputArray dst, double maxValue, in
 | src | required | Source image |
 | dst | required | Destination image |
 | maxValue | required | Non-zero value assigned to the pixels for which the condition is satisfied |
-| adaptiveMethod | required | Adaptive thresholding algorithm to use (see adaptiveThresholdTypes in [OpenCV document](https://docs.opencv.org/4.1.0/index.html)) |
-| thresholdType | required | Threshold type (see ThresholdTypes in [OpenCV document](https://docs.opencv.org/4.1.0/index.html)) |
+| adaptiveMethod | required | Adaptive thresholding algorithm to use (see adaptiveThresholdTypes in [OpenCV document](https://docs.opencv.org/4.9.0/index.html)) |
+| thresholdType | required | Threshold type (see ThresholdTypes in [OpenCV document](https://docs.opencv.org/4.9.0/index.html)) |
 | blocksize | required | Size of a pixel neighborhood that is used to calculate a threshold value
 | C | required | Constant subtracted from the mean |
 
@@ -379,7 +380,7 @@ void cv::matchTemplate(InputArray image, InputArray templ, OutputArray result, i
 | image | required | Input image |
 | templ | required | Template image |
 | result | required | Map of comparison results<br> Depth:32FC1<br> Width: image width - templ width +1<br> Height: image height - templ height +1 |
-| method | required | Specifying the comparison method (see TemplateMatchModes in [OpenCV document](https://docs.opencv.org/4.1.0/index.html)) |
+| method | required | Specifying the comparison method (see TemplateMatchModes in [OpenCV document](https://docs.opencv.org/4.9.0/index.html)) |
 | mask (= noArray() ) | optional | Mask of searched template |
 
 ### 4.11.2. Conditions for using DRP
@@ -404,8 +405,8 @@ void cv::warpAffine (InputArray src, OutputArray dst, InputArray M, Size dsize, 
 | dst | required | Destination image |
 | M | required | Transformation matrix (2x3) |
 | dsize | required | Size of destination image |
-| flags<br>(=INTER_LINEAR) | optional | One of the interpolation algorithm methods (see InterpolationFlags in [OpenCV document](https://docs.opencv.org/4.1.0/index.html)) |
-| borderMode<br>(=BORDER_CONSTARNT) | optional | Pixel extrapolation method (see BorderTypes in [OpenCV document](https://docs.opencv.org/4.1.0/index.html)) | 
+| flags<br>(=INTER_LINEAR) | optional | One of the interpolation algorithm methods (see InterpolationFlags in [OpenCV document](https://docs.opencv.org/4.9.0/index.html)) |
+| borderMode<br>(=BORDER_CONSTARNT) | optional | Pixel extrapolation method (see BorderTypes in [OpenCV document](https://docs.opencv.org/4.9.0/index.html)) | 
 | borderValue<br>(=Scalar() ) | optional | Border value |
 
 ### 4.12.2. Conditions for using DRP
@@ -431,8 +432,8 @@ void cv::warpPerspective (InputArray src, OutputArray dst, InputArray M, Size ds
 | dst | required | Destination image |
 | M | required | Transformation matrix (3x3) |
 | dsize | required | Size of destination image |
-| flags<br>(=INTER_LINEAR) | optional | One of the interpolation algorithm methods (see InterpolationFlags in [OpenCV document](https://docs.opencv.org/4.1.0/index.html)) |
-| borderMode<br>(=BORDER_CONSTARNT) | optional | Pixel extrapolation method (see BorderTypes in [OpenCV document](https://docs.opencv.org/4.1.0/index.html)) | 
+| flags<br>(=INTER_LINEAR) | optional | One of the interpolation algorithm methods (see InterpolationFlags in [OpenCV document](https://docs.opencv.org/4.9.0/index.html)) |
+| borderMode<br>(=BORDER_CONSTARNT) | optional | Pixel extrapolation method (see BorderTypes in [OpenCV document](https://docs.opencv.org/4.9.0/index.html)) | 
 | borderValue<br>(=Scalar() ) | optional | Border value |
 
 ### 4.13.2. Conditions for using DRP
@@ -514,6 +515,33 @@ If the following conditions apply, OpenCVA execute FAST process using DRP.
 | nonmaxSuppression | true | default value |
 | type | FastFeatureDetector::TYPE_9_16 | default value |
 
+## 4.17. remap
+
+### 4.17.1. outline
+Applies a generic geometrical transformation to an image.  
+```
+void cv::remap (InputArray src, OutputArray dst, InputArray map1, InputArray map2, int interpolation, int borderMode = BORDER_CONSTANT, const Scalar & borderValue = Scalar())
+```
+| parameter | required/optional | description |
+| --------- | ----------------- | ----------- |
+| src | required | Source image. |
+| dst | required | Destination image. It has the same size as map1 and the same type as src. |
+| map1 | required | The first map of either (x,y) points or just x values having the type CV_16SC2, CV_32FC1, or CV_32FC2. See [convertMaps](https://docs.opencv.org/4.9.0/da/d54/group__imgproc__transform.html#ga9156732fa8f01be9ebd1a194f2728b7f) for details on converting a floating point representation to fixed-point for speed. |
+| map2 | optional | The second map of y values having the type CV_16UC1, CV_32FC1, or none (empty map if map1 is (x,y) points), respectively. |
+| interpolation | optional | Interpolation method (see [InterpolationFlags](https://docs.opencv.org/4.9.0/da/d54/group__imgproc__transform.html#ga5bb5a1fea74ea38e1a5445ca803ff121)). The methods [INTER_AREA](https://docs.opencv.org/4.9.0/da/d54/group__imgproc__transform.html#gga5bb5a1fea74ea38e1a5445ca803ff121acf959dca2480cc694ca016b81b442ceb) and [INTER_LINEAR_EXACT](https://docs.opencv.org/4.9.0/da/d54/group__imgproc__transform.html#gga5bb5a1fea74ea38e1a5445ca803ff121ac00f4a8155563cdc23437fc0959da935) are not supported by this function. |
+| borderMode | optional | Pixel extrapolation method (see [BorderTypes](https://docs.opencv.org/4.9.0/d2/de8/group__core__array.html#ga209f2f4869e304c82d07739337eae7c5)). When borderMode=[BORDER_TRANSPARENT](https://docs.opencv.org/4.9.0/d2/de8/group__core__array.html#gga209f2f4869e304c82d07739337eae7c5a886a5eb6b466854d63f9e742d5c8eefe), it means that the pixels in the destination image that corresponds to the "outliers" in the source image are not modified by the function. |
+| borderValue | optional | Value used in case of a constant border. By default, it is 0. |
+
+### 4.17.2. Conditions for using DRP
+If the following conditions apply, OpenCVA execute remap process using DRP.
+| parameter | range/values | note |
+| --------- | ------------ | ---- |
+| src | width: 16 or more, even<br> height: 16 or more, even<br> channels: 4 or less<br> bit-depth: 8bit<br> size limit: 4K(3840x2160) | |
+| map1 | width: 16 or more, even<br> height: 16 or more, even<br> type: CV_32FC2<br> size limit: 4K(3840x2160)<br>Not fragmented. |  |
+| map2 | none | |
+| interpolation | INTER_LINEAR | |
+| borderMode | BORDER_CONSTANT | |
+
 # 5. API functions to control OpenCVA
 This chapter describes API functions to control OpenCVA.
 
@@ -555,18 +583,19 @@ The argument of the API function is the array variable OCA_list[]. See the follo
 | 13 | pyrUp |
 | 14 | warpPerspective |
 | 15 | FAST |
+| 16 | remap |
 | Others | (unused) |    
 
-*note: OCA_list[] table type and size is “unsigned long OCA_list[16]”.*
+*note: OCA_list[] table type and size is “unsigned long OCA_list[17]”.*
 
 Setting the OCA_list[index] to 1 and then executing OCA_Activate(), then the corresponding DRP is enabled. If 0 is set, it is desabled.  
 Values other than 0 and 1 are ignored.  
   
 ### [Sample]
 ```
-unsigned long OCA_list[16];
+unsigned long OCA_list[17];
 
-for (int i = 0; i < 16; i++)
+for (int i = 0; i < 17; i++)
 {
     OCA_list[i] = 1;
 }
