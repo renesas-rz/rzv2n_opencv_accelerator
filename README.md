@@ -50,7 +50,7 @@ None.
 
 ## 2.1. OpenCV Version  
 OpenCVA is based on as follows version of OpenCV.  
-**OpenCV 4.9.0-r0**  
+**OpenCV 4.9.0**  
 For datails, please see [OpenCV Document](https://docs.opencv.org/4.9.0/index.html)  
 
 ## 2.2. How to use
