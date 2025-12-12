@@ -39,9 +39,7 @@ If DRP is [enabled](#51-oca_activate) and the parameters of OpenCV meet the [con
 The output OpenCVA using DRP is almost identical to output OpenCV using CPU, but not exactly the same. Much of this difference is due to the accuracy of in the DRP's arithmetic unit, and some is due to differences in algorithms.
 
 <br><span style="color: red; ">
-**OpenCVA must be used in single process and single thread.  
-For details, please see [Chapter 5.2](#52-oca_conflictnotification).  
-DRP is also used for video decoding function of Video Codec Library and DRP-AI TVM, however since DRP is a common HW resource, OpenCVA, video decoding function and DRP-AI TVM cannot be used at the same time.  
+**DRP is also used for video decoding function of Video Codec Library and DRP-AI TVM, however since DRP is a common HW resource, OpenCVA, video decoding function and DRP-AI TVM cannot be used at the same time.  
 For details, please see [Chapter 6](#6-drp-conflict).**
 </span><br>
 
@@ -532,6 +530,8 @@ void cv::remap (InputArray src, OutputArray dst, InputArray map1, InputArray map
 | borderMode | optional | Pixel extrapolation method (see [BorderTypes](https://docs.opencv.org/4.9.0/d2/de8/group__core__array.html#ga209f2f4869e304c82d07739337eae7c5)). When borderMode=[BORDER_TRANSPARENT](https://docs.opencv.org/4.9.0/d2/de8/group__core__array.html#gga209f2f4869e304c82d07739337eae7c5a886a5eb6b466854d63f9e742d5c8eefe), it means that the pixels in the destination image that corresponds to the "outliers" in the source image are not modified by the function. |
 | borderValue | optional | Value used in case of a constant border. By default, it is 0. |
 
+Note: Due to current implementation limitations the size of an input and output images should be less than 32767x32767.  
+
 ### 4.17.2. Conditions for using DRP
 If the following conditions apply, OpenCVA execute remap process using DRP.
 | parameter | range/values | note |
@@ -609,7 +609,7 @@ OCA_Activate(&OCA_list[0]);
 ## 5.2 OCA_ConflictNotification
 
 ### [Summary]
-Sets the behavior when OpenCVA is executed simultaneously in multi-process or multi-thread (exception error occurs or not).
+Sets the behavior when OpenCVA is executed simultaneously in multi-process or multi-thread.
 
 ### [Function name]
 OCA_ConflictNotification
@@ -618,29 +618,12 @@ OCA_ConflictNotification
 void OCA_ConflictNotification (int oca_conflict );
 
 ### [Arguments]
-oca_conflict	0: When OpenCVA is executed simultaneously in multi-process or multi-thread, exception error occurs.  
-Not 0: When OpenCVA is executed simultaneously in multi-process or multi-thread, exception error does not occur, and the second and subsequent OpenCV functions are executed by CPU.
+oca_conflict	0: When OpenCVA is executed simultaneously in multi-process or multi-thread, the OpenCV functions will be executed sequentially by DRP.  
+Not 0: When OpenCVA is executed simultaneously in multi-process or multi-thread, the second and subsequent OpenCV functions are executed by CPU.
 
 ### [Feature]
-OpenCVA must be used in single process and single thread. Sets the behavior when OpenCVA is executed simultaneously in multi-process or multi-thread by this function. By default, it causes an exception error. The error code for exception errors is -501.  
+Sets the behavior when OpenCVA is executed simultaneously in multi-process or multi-thread. By default, the OpenCV functions will be executed sequentially by DRP.  
 
-### [Sample]
-The following is a sample to handle exception error.  
-```
-/* Exception error enable */
-OCA_ConflictNotification(0);
-try
-{
-    cv::GaussianBlur(src, dst, {7,7}, 0, 0);
-}
-catch (cv::Exception& e)
-{
-    if (e == -501)
-    {
-        /* exception error handling */
-    }
-}
-```
 # 6. DRP conflict
 This chapter describes DRP conflict.
 
