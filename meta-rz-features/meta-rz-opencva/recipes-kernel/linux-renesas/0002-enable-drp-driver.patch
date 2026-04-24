@@ -1,35 +1,5 @@
-From 6b0a5f0c03c048dc79b3ba3961b49ff1edad1b98 Mon Sep 17 00:00:00 2001
-From: Katsuki Tozawa <katsuki.tozawa.wz@renesas.com>
-Date: Mon, 3 Feb 2025 16:38:05 +0900
-Subject: [PATCH 2/2] enable drp driver
-
----
- drivers/Kconfig          |    2 +
- drivers/Makefile         |    1 +
- drivers/drp/Kconfig      |   29 +
- drivers/drp/Makefile     |   13 +
- drivers/drp/drp-core.c   | 1660 ++++++++++++++++++++++++
- drivers/drp/drp-core.h   |  120 ++
- drivers/drp/drp-if.c     | 2594 ++++++++++++++++++++++++++++++++++++++
- drivers/drp/drp-reg.h    | 1071 ++++++++++++++++
- drivers/drp/lock_drp.c   |  632 ++++++++++
- drivers/drp/lock_drp.h   |   67 +
- include/linux/drp.h      |   22 +
- include/uapi/linux/drp.h |   95 ++
- 12 files changed, 6306 insertions(+)
- create mode 100644 drivers/drp/Kconfig
- create mode 100644 drivers/drp/Makefile
- create mode 100644 drivers/drp/drp-core.c
- create mode 100644 drivers/drp/drp-core.h
- create mode 100644 drivers/drp/drp-if.c
- create mode 100644 drivers/drp/drp-reg.h
- create mode 100644 drivers/drp/lock_drp.c
- create mode 100644 drivers/drp/lock_drp.h
- create mode 100644 include/linux/drp.h
- create mode 100644 include/uapi/linux/drp.h
-
 diff --git a/drivers/Kconfig b/drivers/Kconfig
-index 04a20db857ba..0ed46ef1228b 100644
+index 04a20db..0ed46ef 100644
 --- a/drivers/Kconfig
 +++ b/drivers/Kconfig
 @@ -89,6 +89,8 @@ source "drivers/thermal/Kconfig"
@@ -42,7 +12,7 @@ index 04a20db857ba..0ed46ef1228b 100644
  
  source "drivers/bcma/Kconfig"
 diff --git a/drivers/Makefile b/drivers/Makefile
-index 9fc91d2bbe4c..a6c27ae23cbd 100644
+index 9fc91d2..a6c27ae 100644
 --- a/drivers/Makefile
 +++ b/drivers/Makefile
 @@ -119,6 +119,7 @@ obj-y				+= power/
@@ -53,9 +23,9 @@ index 9fc91d2bbe4c..a6c27ae23cbd 100644
  obj-$(CONFIG_MD)		+= md/
  obj-$(CONFIG_BT)		+= bluetooth/
  obj-$(CONFIG_ACCESSIBILITY)	+= accessibility/
-diff --git a/drivers/drp/Kconfig b/drivers/drp/Kconfig
+diff --git b/drivers/drp/Kconfig b/drivers/drp/Kconfig
 new file mode 100644
-index 000000000000..2fc4b39a8b67
+index 0000000..2fc4b39
 --- /dev/null
 +++ b/drivers/drp/Kconfig
 @@ -0,0 +1,29 @@
@@ -88,9 +58,9 @@ index 000000000000..2fc4b39a8b67
 +        When "Support Multiple OS System" is 'Y', this option is enable.  
 +
 +endmenu
-diff --git a/drivers/drp/Makefile b/drivers/drp/Makefile
+diff --git b/drivers/drp/Makefile b/drivers/drp/Makefile
 new file mode 100644
-index 000000000000..c8570d4faef2
+index 0000000..c8570d4
 --- /dev/null
 +++ b/drivers/drp/Makefile
 @@ -0,0 +1,13 @@
@@ -107,12 +77,12 @@ index 000000000000..c8570d4faef2
 +else
 +obj-$(CONFIG_DRP)	+= drp-core.o drp-if.o
 +endif
-diff --git a/drivers/drp/drp-core.c b/drivers/drp/drp-core.c
+diff --git b/drivers/drp/drp-core.c b/drivers/drp/drp-core.c
 new file mode 100644
-index 000000000000..5f51730a9aab
+index 0000000..f3ac7c0
 --- /dev/null
 +++ b/drivers/drp/drp-core.c
-@@ -0,0 +1,1660 @@
+@@ -0,0 +1,1664 @@
 +/*
 + * Driver for the Renesas RZ/V2H, RZ/V2N DRP unit
 + *
@@ -1345,7 +1315,11 @@ index 000000000000..5f51730a9aab
 +    }
 +
 +    // 6. Disable address relocatable table.
++#if defined(CONFIG_ARCH_R9A09G056)
 +    disable_addr_relocatable_func(0, aimac_base_addr);
++#else /* This function call has no effect, but it is not called in RZ/V2H. This is a description for common source code. */
++    disable_addr_relocatable_func(0);
++#endif
 +
 +    // 7. Stop clock.
 +    stop_aimac_clk(aimac_base_addr);
@@ -1773,9 +1747,9 @@ index 000000000000..5f51730a9aab
 +MODULE_AUTHOR("Renesas Electronics Corporation");
 +MODULE_LICENSE("GPL v2");
 +#endif
-diff --git a/drivers/drp/drp-core.h b/drivers/drp/drp-core.h
+diff --git b/drivers/drp/drp-core.h b/drivers/drp/drp-core.h
 new file mode 100644
-index 000000000000..37f7be375a9f
+index 0000000..37f7be3
 --- /dev/null
 +++ b/drivers/drp/drp-core.h
 @@ -0,0 +1,120 @@
@@ -1899,12 +1873,12 @@ index 000000000000..37f7be375a9f
 +int32_t initialize_cpg_drp(addr_t cpg_base_addr);
 +
 +#endif /* DRP__H */
-diff --git a/drivers/drp/drp-if.c b/drivers/drp/drp-if.c
+diff --git b/drivers/drp/drp-if.c b/drivers/drp/drp-if.c
 new file mode 100644
-index 000000000000..280d7071e7c2
+index 0000000..abf0e83
 --- /dev/null
 +++ b/drivers/drp/drp-if.c
-@@ -0,0 +1,2594 @@
+@@ -0,0 +1,2791 @@
 +/*
 + * Driver for the Renesas RZ/V2H, RZ/V2N DRP unit
 + *
@@ -1984,7 +1958,7 @@ index 000000000000..280d7071e7c2
 +#define SYS_MASK_DRP                (0x00000300)
 +#define SYS_SHIFT                   (24)
 +
-+#define DRP_DRIVER_VERSION        "1.20 rel.3"
++#define DRP_DRIVER_VERSION        "1.30 rel.2"
 +#define DRP_DEV_NUM                (1)
 +#define DRP_DRIVER_NAME            "drp"     /* Device name */
 +#define DRP_64BYTE_ALIGN           (0x3F)      /* Check 64-byte alignment */
@@ -2193,17 +2167,6 @@ index 000000000000..280d7071e7c2
 +    { .compatible = "renesas,rzv2h-drp",},
 +    { .compatible = "renesas,rzv2n-drp",},
 +    { /* sentinel */ }
-+};
-+static struct platform_driver drp_platform_driver = {
-+    .driver = {
-+        .name   = "drp-rz",
-+        .of_match_table = drp_match,
-+    },
-+    .probe      = drp_probe,
-+    .remove     = drp_remove,
-+#ifdef ENABLE_DRP_SUPPORT_SHARED_MEMORY
-+    .shutdown   = drp_shutdown,
-+#endif
 +};
 +
 +static struct drp_priv *drp_priv;
@@ -4032,6 +3995,12 @@ index 000000000000..280d7071e7c2
 +        goto end;
 +    }
 +
++    if ((DRP_ERRINFO_SUSPEND == local_drp_status.err))
++    {
++        result = -EAGAIN;
++        goto end;
++    }
++
 +    DRP_DEBUG_WAIT();
 +    goto end;
 +end:
@@ -4487,6 +4456,208 @@ index 000000000000..280d7071e7c2
 +}
 +#endif
 +
++static int drp_suspend_noirq(struct device *dev)
++{
++    int result = 0;
++    unsigned long flags;
++    struct drp_priv *priv = drp_priv;
++#ifdef ENABLE_DRP_SUPPORT_SHARED_MEMORY
++    int is_shared_drpai_used = -1;
++#endif
++
++    DRP_DEBUG_PRINT("start.\n");
++
++    if(unlikely(down_timeout(&priv->sem, MAX_SEM_TIMEOUT))) 
++    {
++        result = -ETIMEDOUT;
++        goto end;
++    }
++#ifdef ENABLE_DRP_SUPPORT_SHARED_MEMORY
++    /* DRPFLAG_DRP_LOCK is set */
++    is_shared_drpai_used = R_DRP_LockDrpaiContStatus(drp_shared_exclusion,
++                                                     &shared_mem_lock,
++                                                     PROCESS_CONTEXT,
++                                                     DRPFLAG_DRP_LOCK);
++    if(-1 == is_shared_drpai_used)
++    {
++        result = -EINPROGRESS;
++        goto end;
++    }
++    if( 0 != is_shared_drpai_used)
++    {
++        result = -EADDRNOTAVAIL;
++        goto end;
++    }
++
++    if(0 == R_DRP_IsDrpaiHwStatusActive(drp_shared_exclusion))
++    {
++        /* The DRP-AI is running. Therefore, stop the DRP-AI first. */
++#endif
++
++    /* Finalize DRP procedure */
++    if(R_DRP_SUCCESS != drp_stop_device(DRP_CH))
++    {
++        result = -EIO;
++        dev_err(dev, "suspend: Failed to stop the DRP");
++        goto end;
++    }
++
++    /* Reset DRP (CPG Reset)*/
++    if(R_DRP_SUCCESS != drp_cpg_reset(DRP_CH))
++    {
++        result = -EIO;
++        dev_err(dev, "suspend: Failed to reset the CPG");
++        goto end;
++    }
++
++    dev_info(dev, "suspend: The stopping process has been executed.");
++#ifdef ENABLE_DRP_SUPPORT_SHARED_MEMORY
++    }
++    else
++    {
++        dev_info(dev, "suspend: The stopping process was skipped because the DRP was already stopped.");
++    }
++#endif
++
++    // Update internal state
++#ifdef ENABLE_DRP_SUPPORT_SHARED_MEMORY
++    R_DRP_RecordDrpaiInactiveStatus(drp_shared_exclusion,
++                                    &shared_mem_lock,
++                                    PROCESS_CONTEXT);
++#endif
++    spin_lock_irqsave(&priv->lock, flags);
++    // If stopping the DRP forcibly during inference,
++    // We change status from DRP_ERRINFO_SUCCESS to DRP_ERRINFO_SUSPEND
++    // in order to notify statu to user via ioctl(DRP_GET_STATUS).
++    priv->drp_status.err    = DRP_ERRINFO_SUCCESS;
++    if(DRP_STATUS_RUN == priv->drp_status.status){
++        priv->drp_status.err    = DRP_ERRINFO_SUSPEND;
++        dev_info(dev, "suspend: The DRP has been forcibly stopped. Check the status with ioctl(DRP_GET_STATUS).");
++    }
++    priv->drp_status.status = DRP_STATUS_INIT;
++    spin_unlock_irqrestore(&priv->lock, flags);
++
++    dev_info(dev, "suspend: OK");
++
++end:
++#ifdef ENABLE_DRP_SUPPORT_SHARED_MEMORY
++    if( 0 == is_shared_drpai_used )
++    {
++        R_DRP_UnlockDrpaiContStatus(drp_shared_exclusion,
++                                    &shared_mem_lock,
++                                    PROCESS_CONTEXT,
++                                    DRPFLAG_DRP_LOCK);
++    }
++#endif
++    if(-ETIMEDOUT != result)
++    {
++        up(&priv->sem);
++    }
++    DRP_DEBUG_PRINT("end.\n");
++    return result;
++}
++
++static int drp_resume_noirq(struct device *dev)
++{
++    int result = 0;
++    unsigned long flags;
++    struct drp_priv *priv = drp_priv;
++#ifdef ENABLE_DRP_SUPPORT_SHARED_MEMORY
++    int is_shared_drpai_used = -1;
++#endif
++
++    DRP_DEBUG_PRINT("start.\n");
++
++    if(unlikely(down_timeout(&priv->sem, MAX_SEM_TIMEOUT))) 
++    {
++        result = -ETIMEDOUT;
++        goto end;
++    }
++
++#ifdef ENABLE_DRP_SUPPORT_SHARED_MEMORY
++    /* DRPFLAG_DRP_LOCK is set */
++    is_shared_drpai_used = R_DRP_LockDrpaiContStatus(drp_shared_exclusion,
++                                                     &shared_mem_lock,
++                                                     PROCESS_CONTEXT,
++                                                     DRPFLAG_DRP_LOCK);
++    if(-1 == is_shared_drpai_used)
++    {
++        result = -EINPROGRESS;
++        goto end;
++    }
++    if( 0 != is_shared_drpai_used)
++    {
++        result = -EADDRNOTAVAIL;
++        goto end;
++    }
++
++    if(-1 == R_DRP_IsDrpaiHwStatusActive(drp_shared_exclusion))
++    {
++        /* The DRP-AI is initialised only when DRP-AI is stopped. */
++#endif
++    // Initialize the DRP-AI
++    drp_init_device(DRP_CH);
++
++    dev_info(dev, "resume: The initialization process has been executed.");
++#ifdef ENABLE_DRP_SUPPORT_SHARED_MEMORY
++    }
++    else
++    {
++        dev_info(dev, "resume: The initialization process was skipped because the DRP was already initialized.");
++    }
++#endif
++
++    // Update internal state
++#ifdef ENABLE_DRP_SUPPORT_SHARED_MEMORY
++    R_DRP_RecordDrpaiActiveStatus(drp_shared_exclusion,
++                                  &shared_mem_lock,
++                                  PROCESS_CONTEXT);
++#endif
++    spin_lock_irqsave(&priv->lock, flags);
++    priv->drp_status.status = DRP_STATUS_IDLE;
++    /* Set first proc flag */
++    priv->drp_first_proc_after_init = 1;
++    priv->drp_irq_flag            = DRP_IRQ_CHECK_DISABLE;
++    wake_up_interruptible(&read_q);
++    spin_unlock_irqrestore(&priv->lock, flags);
++
++    dev_info(dev, "resume: OK");
++
++end:
++#ifdef ENABLE_DRP_SUPPORT_SHARED_MEMORY
++    if( 0 == is_shared_drpai_used )
++    {
++        R_DRP_UnlockDrpaiContStatus(drp_shared_exclusion,
++                                    &shared_mem_lock,
++                                    PROCESS_CONTEXT,
++                                    DRPFLAG_DRP_LOCK);
++    }
++#endif
++    if(-ETIMEDOUT != result)
++    {
++        up(&priv->sem);
++    }
++    DRP_DEBUG_PRINT("end.\n");
++    return result;
++}
++
++static const struct dev_pm_ops drp_pm_ops = {
++    NOIRQ_SYSTEM_SLEEP_PM_OPS(drp_suspend_noirq, drp_resume_noirq)
++};
++
++static struct platform_driver drp_platform_driver = {
++    .driver = {
++        .name   = "drp-rz",
++	.pm     = pm_ptr(&drp_pm_ops),
++	.of_match_table = drp_match,
++    },
++    .probe      = drp_probe,
++    .remove     = drp_remove,
++#ifdef ENABLE_DRP_SUPPORT_SHARED_MEMORY
++    .shutdown   = drp_shutdown,
++#endif
++};
++
 +module_platform_driver(drp_platform_driver);
 +MODULE_DEVICE_TABLE(of, drp_match);
 +#if defined(CONFIG_ARCH_R9A09G056)
@@ -4499,9 +4670,9 @@ index 000000000000..280d7071e7c2
 +MODULE_AUTHOR("Renesas Electronics Corporation");
 +MODULE_LICENSE("GPL v2");
 +
-diff --git a/drivers/drp/drp-reg.h b/drivers/drp/drp-reg.h
+diff --git b/drivers/drp/drp-reg.h b/drivers/drp/drp-reg.h
 new file mode 100644
-index 000000000000..0fff58bffdcf
+index 0000000..0fff58b
 --- /dev/null
 +++ b/drivers/drp/drp-reg.h
 @@ -0,0 +1,1071 @@
@@ -5576,9 +5747,9 @@ index 000000000000..0fff58bffdcf
 +#define MACCTL_ERR_STS_ADDR         (0x001C0008uLL)
 +
 +#endif /* DRP_REG__H */
-diff --git a/drivers/drp/lock_drp.c b/drivers/drp/lock_drp.c
+diff --git b/drivers/drp/lock_drp.c b/drivers/drp/lock_drp.c
 new file mode 100644
-index 000000000000..043bf12e1f6f
+index 0000000..e5caf09
 --- /dev/null
 +++ b/drivers/drp/lock_drp.c
 @@ -0,0 +1,632 @@
@@ -6143,7 +6314,7 @@ index 000000000000..043bf12e1f6f
 + * @return Whether this function succeeded or not
 + * @retval 0 Successfully clear a shared memory. Write 0 to shared memory.
 + * @retval -2 Invalid argument is set.
-+ * @note Write 0 to FLAG_MANAGE_MEMORY area. Write 0 to HASH_TOP_STORE_MEMORY and HASH_BOTTOM_STORE_MEMORY.
++ * @note Write 0 to HASH_TOP_STORE_MEMORY and HASH_BOTTOM_STORE_MEMORY.
 +*/
 +int R_DRP_ClearHashArea(unsigned long long *addr)
 +{
@@ -6214,9 +6385,9 @@ index 000000000000..043bf12e1f6f
 +    *p_rstc = rstc;
 +    return 0;
 +}
-diff --git a/drivers/drp/lock_drp.h b/drivers/drp/lock_drp.h
+diff --git b/drivers/drp/lock_drp.h b/drivers/drp/lock_drp.h
 new file mode 100644
-index 000000000000..11a55e79f7d6
+index 0000000..11a55e7
 --- /dev/null
 +++ b/drivers/drp/lock_drp.h
 @@ -0,0 +1,67 @@
@@ -6287,9 +6458,9 @@ index 000000000000..11a55e79f7d6
 +#endif /* __cplusplus */
 +
 +#endif /* R_DRP_LOCK_H */
-diff --git a/include/linux/drp.h b/include/linux/drp.h
+diff --git b/include/linux/drp.h b/include/linux/drp.h
 new file mode 100644
-index 000000000000..f368295a1b24
+index 0000000..f368295
 --- /dev/null
 +++ b/include/linux/drp.h
 @@ -0,0 +1,22 @@
@@ -6315,12 +6486,12 @@ index 000000000000..f368295a1b24
 +#include <uapi/linux/drp.h>
 +
 +#endif /* _DRP_H */
-diff --git a/include/uapi/linux/drp.h b/include/uapi/linux/drp.h
+diff --git b/include/uapi/linux/drp.h b/include/uapi/linux/drp.h
 new file mode 100644
-index 000000000000..3c8e8d33e985
+index 0000000..2cabd68
 --- /dev/null
 +++ b/include/uapi/linux/drp.h
-@@ -0,0 +1,95 @@
+@@ -0,0 +1,96 @@
 +/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
 +/*
 + * Driver for the Renesas RZ/V2H DRPI unit
@@ -6366,6 +6537,7 @@ index 000000000000..3c8e8d33e985
 +#define DRP_ERRINFO_SUCCESS               (0)
 +#define DRP_ERRINFO_DRP_ERR               (-1)
 +#define DRP_ERRINFO_RESET                 (-3)
++#define DRP_ERRINFO_SUSPEND               (-4)
 +#define DRP_RESERVED_NUM                  (10)
 +#define DRP_SEQ_NUM                       (20)
 +#define DRP_EXE_DRP_40BIT                 (3)
@@ -6416,6 +6588,3 @@ index 000000000000..3c8e8d33e985
 +#endif
 +
 +#endif /* _UAPI__DRP_H */
--- 
-2.34.1
-

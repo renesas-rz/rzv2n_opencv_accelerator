@@ -39,7 +39,7 @@ If DRP is [enabled](#51-oca_activate) and the parameters of OpenCV meet the [con
 The output OpenCVA using DRP is almost identical to output OpenCV using CPU, but not exactly the same. Much of this difference is due to the accuracy of in the DRP's arithmetic unit, and some is due to differences in algorithms.
 
 <br><span style="color: red; ">
-**DRP is also used for video decoding function of Video Codec Library and DRP-AI TVM, however since DRP is a common HW resource, OpenCVA, video decoding function and DRP-AI TVM cannot be used at the same time.  
+**DRP is also used for video decoding function of Video Codec Library and RUHMI, however since DRP is a common HW resource, OpenCVA, video decoding function and RUHMI cannot be used at the same time.  
 For details, please see [Chapter 6](#6-drp-conflict).**
 </span><br>
 
@@ -83,6 +83,7 @@ The following table lists the OpenCV functions that can be executed using DRP in
 | [4.15. pyrUp](#415-pyrup) | Upsampling step of the Gaussian pyramid construction. |
 | [4.16. FAST](#416-fast) | Detects corners using the FAST algorithm. |
 | [4.17. remap](#417-remap) | Applies a generic geometrical transformation to an image. |
+| [4.18. StereoSGBM](#418-stereosgbm) | Creates StereoSGBM object for the modified H. Hirschmuller algorithm. |
 
 # 4. OpenCVA API specification and condition for using DRP
 This chapter describes the OpenCV API that can be executed by DRP, and their conditions for using DRP.
@@ -542,6 +543,58 @@ If the following conditions apply, OpenCVA execute remap process using DRP.
 | interpolation | INTER_LINEAR | |
 | borderMode | BORDER_CONSTANT | |
 
+## 4.18. StereoSGBM
+
+### 4.18.1. outline
+Creates StereoSGBM object for the modified H. Hirschmuller algorithm.
+```
+static Ptr<StereoSGBM> cv::StereoSGBM::create(
+    int minDisparity = 0,
+    int numDisparities = 16,
+    int blockSize = 3,
+    int P1 = 0,
+    int P2 = 0,
+    int disp12MaxDiff = 0,
+    int preFilterCap = 0,
+    int uniquenessRatio = 0,
+    int speckleWindowSize = 0,
+    int speckleRange = 0,
+    int mode = StereoSGBM::MODE_SGBM 
+)
+```
+| parameter | required/optional | description |
+| --------- | ----------------- | ----------- |
+| minDisparity | optional | Minimum possible disparity value. Normally, it is zero but sometimes rectification algorithms can shift images, so this parameter needs to be adjusted accordingly. |
+| numDisparities | optional | Maximum disparity minus minimum disparity. The value is always greater than zero. In the current implementation, this parameter must be divisible by 16. |
+| blockSize | optional | Matched block size. It must be an odd number >=1 . Normally, it should be somewhere in the 3..11 range. |
+| P1 | optional | The first parameter controlling the disparity smoothness. See below. |
+| P2 | optional | The second parameter controlling the disparity smoothness. The larger the values are, the smoother the disparity is. P1 is the penalty on the disparity change by plus or minus 1 between neighbor pixels. P2 is the penalty on the disparity change by more than 1 between neighbor pixels. The algorithm requires P2 > P1 . See stereo_match.cpp sample where some reasonably good P1 and P2 values are shown (like 8\*number_of_image_channels\*blockSize*blockSize and 32\*number_of_image_channels\*blockSize\*blockSize , respectively). |
+| disp12MaxDiff | optional | Maximum allowed difference (in integer pixel units) in the left-right disparity check. Set it to a non-positive value to disable the check. |
+| preFilterCap | optional | Truncation value for the prefiltered image pixels. The algorithm first computes x-derivative at each pixel and clips its value by [-preFilterCap, preFilterCap] interval. The result values are passed to the Birchfield-Tomasi pixel cost function. |
+| uniquenessRatio | optional | Margin in percentage by which the best (minimum) computed cost function value should "win" the second best value to consider the found match correct. Normally, a value within the 5-15 range is good enough. |
+| speckleWindowSize | optional | Maximum size of smooth disparity regions to consider their noise speckles and invalidate. Set it to 0 to disable speckle filtering. Otherwise, set it somewhere in the 50-200 range. |
+| speckleRange | optional | Maximum disparity variation within each connected component. If you do speckle filtering, set the parameter to a positive value, it will be implicitly multiplied by 16. Normally, 1 or 2 is good enough. |
+| mode | optional | Set it to [StereoSGBM::MODE_HH](https://docs.opencv.org/4.9.0/d2/d85/classcv_1_1StereoSGBM.html#a50fdae81020b449cde5864406761e112a0f746667febe92e1189e924c40752660) to run the full-scale two-pass dynamic programming algorithm. It will consume O(W\*H\*numDisparities) bytes, which is large for 640x480 stereo and huge for HD-size pictures. By default, it is set to false. |
+
+### 4.18.2. Conditions for using DRP
+If the following conditions apply, OpenCVA execute StereoSGBM::create process using DRP.<br>
+Specify create() arguments directly without using the get/set methods.
+| parameter | range/values | note |
+| --------- | ------------ | ---- |
+| minDisparity | 0 |  |
+| numDisparities | Multiple of 16<br>16 ~ 256 (When image width is greater than or equal to 32 and less than or equal to 1280)<br>16 ~ 128 (When image width is greater than 1280 and less than or equal to 1920) |  |
+| blockSize | 3, 5, 7, 9 |  |
+| P1 | P2 > P1<br>1 ~ 79 (When image width is greater than or equal to 32 and less than or equal to 640)<br>1 ~ 49 (When image width is greater than 640 and less than or equal to 1280)<br>1 ~ 29 (When image width is greater than 1280 and less than or equal to 1920) |  |
+| P2 | P2 > P1<br>2 ~ 80 (When image width is greater than or equal to 32 and less than or equal to 640)<br>2 ~ 50 (When image width is greater than 640 and less than or equal to 1280)<br>2 ~ 30 (When image width is greater than 1280 and less than or equal to 1920) |  |
+| disp12MaxDiff | This parameter is ignored. Specify 0. |  |
+| preFilterCap | This parameter is ignored. Specify 0. |  |
+| uniquenessRatio | 0 ~ 100 |  |
+| speckleWindowSize | This parameter is ignored. Specify 0. |  |
+| speckleRange | This parameter is ignored. Specify 0. |  |
+| mode | StereoSGBM::MODE_SGM_DRP | This mode is unique to OpenCV Accelerator. When this mode is selected, an error occurs if the parameter is out of range. |
+
+Additionally, input images only support grayscale. The width of the input image must be a multiple of 4, greater than or equal to 32 and less than or equal to 1920.
+
 # 5. API functions to control OpenCVA
 This chapter describes API functions to control OpenCVA.
 
@@ -567,41 +620,42 @@ OCA_list	: OpenCVA function activation table.
 Disable or enable DRP used for OpenCV, for each of OpenCV function. By default, all are enabled. If disabled, the OpenCV function execute by CPU.  
 The argument of the API function is the array variable OCA_list[]. See the following table for OCA_list[] index and OpenCV functions.  
   
-| index of OCA_list[] | OpenCV function |
-| ------------------- | --------------- |
-| 0 | resize |
-| 2 | cvtColor, cvtColorTwoPlane |
-| 4 | GaussianBlur |
-| 5 | dilate, morphologyEX |
-| 6 | erode, morphologyEX |
-| 7 | Filter2D |
-| 8 | Sobel |
-| 9 | adaptiveThreshold |
-| 10 | matchTemplate |
-| 11 | warpAffine |
-| 12 | pyrDown |
-| 13 | pyrUp |
-| 14 | warpPerspective |
-| 15 | FAST |
-| 16 | remap |
+| index of OCA_list[] | MACRO | OpenCV function |
+| ------------------- | ----- | --------------- |
+| 0 | OCA_FUNC_RESIZE | resize |
+| 2 | OCA_FUNC_CVT_COLOR | cvtColor, cvtColorTwoPlane |
+| 4 | OCA_FUNC_GAUSSIAN | GaussianBlur |
+| 5 | OCA_FUNC_DILATE | dilate, morphologyEX |
+| 6 | OCA_FUNC_ERODE | erode, morphologyEX |
+| 7 | OCA_FUNC_FILTER2D | Filter2D |
+| 8 | OCA_FUNC_SOBEL | Sobel |
+| 9 | OCA_FUNC_ADAPTIVE_TH | adaptiveThreshold |
+| 10 | OCA_FUNC_MATCH_TEMPLATE | matchTemplate |
+| 11 | OCA_FUNC_AFFINE | warpAffine |
+| 12 | OCA_FUNC_PYR_DOWN | pyrDown |
+| 13 | OCA_FUNC_PYR_UP | pyrUp |
+| 14 | OCA_FUNC_PERSPECTIVE | warpPerspective |
+| 15 | OCA_FUNC_FAST | FAST |
+| 16 | OCA_FUNC_REMAP | remap |
+| 17 | OCA_FUNC_STEREOSGM | StereoSGBM |
 | Others | (unused) |    
 
-*note: OCA_list[] table type and size is “unsigned long OCA_list[17]”.*
+*note: OCA_list[] table type and size is “unsigned long OCA_list[OCA_LIST_NUM]”.*
 
 Setting the OCA_list[index] to 1 and then executing OCA_Activate(), then the corresponding DRP is enabled. If 0 is set, it is desabled.  
 Values other than 0 and 1 are ignored.  
   
 ### [Sample]
 ```
-unsigned long OCA_list[17];
+unsigned long OCA_list[OCA_LIST_NUM];
 
-for (int i = 0; i < 17; i++)
+for (int i = 0; i < OCA_LIST_NUM; i++)
 {
     OCA_list[i] = 1;
 }
 
 /* Disable DRP(Sobel) */
-OCA_list[8] = 0;
+OCA_list[OCA_FUNC_SOBEL] = 0;
 
 OCA_Activate(&OCA_list[0]);
 ```
@@ -628,9 +682,9 @@ Sets the behavior when OpenCVA is executed simultaneously in multi-process or mu
 This chapter describes DRP conflict.
 
 ## 6.1. About DRP conflict
-OpenCVA uses “Dynamically Reconfigurable Processor” (=DRP). Video decoding functions of Video Codec Library and DRP-AI TVM also use the same DRP. There is only one DRP on a device and these functions occupy DRP while they are executing. If a function that uses DRP is already executed, another function that uses DRP cannot be executed. This is called “DRP conflict”.  
+OpenCVA uses “Dynamically Reconfigurable Processor” (=DRP). Video decoding functions of Video Codec Library and RUHMI also use the same DRP. There is only one DRP on a device and these functions occupy DRP while they are executing. If a function that uses DRP is already executed, another function that uses DRP cannot be executed. This is called “DRP conflict”.  
 
-Using OpenCVA, video decoding function and DRP-AI TVM at the same time will cause DRP conflict.  
+Using OpenCVA, video decoding function and RUHMI at the same time will cause DRP conflict.  
   
 ## 6.2. What happened if there was a conflict, and how to handle it
-If DRP conflict is caused, an error in OpenCVA, Video Codec Library or DRP-AI TVM will occur. By executing these functions sequentially, DRP conflict can be avoided. Users should be careful not to use OpenCVA, video decoding function and DRP-AI TVM simultaneously.  
+If DRP conflict is caused, an error in OpenCVA, Video Codec Library or RUHMI will occur. By executing these functions sequentially, DRP conflict can be avoided. Users should be careful not to use OpenCVA, video decoding function and RUHMI simultaneously.  

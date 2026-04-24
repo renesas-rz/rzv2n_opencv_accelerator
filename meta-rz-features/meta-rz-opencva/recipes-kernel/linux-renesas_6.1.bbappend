@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2024 RenesasElectronics, Co, Ltd.
+# Copyright (C) 2026 RenesasElectronics, Co, Ltd.
 #
 DESCRIPTION = "RZ/V2N DRP Driver"
 
